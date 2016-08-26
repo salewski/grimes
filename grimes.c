@@ -9,11 +9,11 @@
 #include <sys/signalfd.h>
 #include <sys/wait.h>
 
-static void handle_error()
-{
-	fprintf(stderr, "error: %s\n", strerror(errno));
-	exit(EXIT_FAILURE);
-}
+#define bail(fmt, ...)							\
+	do {								\
+		fprintf(stderr, "init: " fmt ": %m\n", ##__VA_ARGS__); \
+		exit(__COUNTER__ + 1);					\
+	} while(0)
 
 typedef struct process_t {
 	char **args;
@@ -97,10 +97,19 @@ int process_exec(process_t * process)
 	}
 	if (pid == 0) {
 		if (sigprocmask(SIG_SETMASK, &process->set, NULL) != 0) {
-			handle_error();
+			bail("set sigprocmask %s", strerror(errno));
 		}
 		execvp(process->args[0], process->args);
-		handle_error();
+		int status = EXIT_FAILURE;
+		switch errno {
+		case ENOENT:
+			status = 127;
+			break;
+		case EACCES:
+			status = 126;
+			break;
+		}
+		exit(status);
 	}
 	process->pid = pid;
 	return 0;
@@ -111,24 +120,23 @@ int main(int argc, char **argv)
 	process_t process;
 	reaper_t reaper;
 	if (reaper_init(&reaper, &process) != 0) {
-		handle_error();
+		bail("initialize reaper %s", strerror(errno));
 	}
 	// setup the process
 	process.args = &argv[1];
 	if (process_exec(&process) != 0) {
-		handle_error();
+		bail("exec process %s", strerror(errno));
 	}
 	for (;;) {
 		struct signalfd_siginfo info;
 		if (read(reaper.fd, &info, sizeof(info)) != sizeof(info)) {
-			fprintf(stderr, "read: invalid size of siginfo\n");
-			exit(EXIT_FAILURE);
+			bail("invalid size of siginfo");
 		}
 		uint32_t sig = info.ssi_signo;
 		switch (sig) {
 		case SIGCHLD:
 			if (reaper_reap(&reaper) != 0) {
-				handle_error();
+				bail("reap processes %s", strerror(errno));
 			}
 			break;
 		default:
