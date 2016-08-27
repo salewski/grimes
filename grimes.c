@@ -109,6 +109,7 @@ int process_exec(process_t * process)
 			status = 126;
 			break;
 		}
+		fprintf(stderr, "%s\n", strerror(errno));
 		exit(status);
 	}
 	process->pid = pid;
