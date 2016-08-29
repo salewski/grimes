@@ -1,3 +1,3 @@
 
 all:
-	gcc -o init -static grimes.c
+	gcc -O2 -o init -static grimes.c
