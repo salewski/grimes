@@ -62,23 +62,22 @@ int reaper_init(reaper_t * reaper, process_t * process)
 // is the child process that we spawned get its exit status and exit this program
 int reaper_reap(reaper_t * reaper)
 {
-	int status, child_exited, child_status;
+	int status, child_exited, child_status = 0;
 	struct rusage usage;
 	for (;;) {
-		pid_t pid = wait4(-1, &status, WNOHANG, &usage);
+		pid_t pid = waitpid(-1, &status, WNOHANG);
 		if (pid < 0) {
-			if (errno == ECHILD) {
-				if (child_exited) {
-					close(reaper->fd);
-					if (WIFSIGNALED(child_status)) {
-						exit(WTERMSIG(child_status) +
-						     128);
-					}
-					exit(WEXITSTATUS(child_status));
-				}
-				return 0;
+			if (errno != ECHILD) {
+				return pid;
 			}
-			return pid;
+			if (child_exited) {
+				close(reaper->fd);
+				if (WIFSIGNALED(child_status)) {
+					exit(WTERMSIG(child_status) + 128);
+				}
+				exit(WEXITSTATUS(child_status));
+			}
+			return 0;
 		}
 		if (reaper->child->pid == pid) {
 			child_exited = 1;
