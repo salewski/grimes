@@ -11,7 +11,7 @@
 
 #define bail(fmt, ...)							\
 	do {								\
-		fprintf(stderr, "init: " fmt ": %m\n", ##__VA_ARGS__); \
+		fprintf(stderr, fmt ": %m\n", ##__VA_ARGS__); \
 		exit(__COUNTER__ + 1);					\
 	} while(0)
 
