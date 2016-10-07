@@ -64,11 +64,13 @@ int reaper_reap(reaper_t * reaper)
 	int status, child_exited, child_status = 0;
 	for (;;) {
 		pid_t pid = waitpid(-1, &status, WNOHANG);
-		if (pid < 0) {
-			// reap until we receive an ECHILD stating that we have no more
-			// child processes that currently need to be reaped
+		switch (pid) {
+		case 0:
+			// nothing to do here
+			return 0;
+		case -1:
 			if (errno != ECHILD) {
-				return pid;
+				return -1;
 			}
 			if (child_exited) {
 				close(reaper->fd);
@@ -78,12 +80,14 @@ int reaper_reap(reaper_t * reaper)
 				exit(WEXITSTATUS(child_status));
 			}
 			return 0;
-		}
-		// save the child processes state until our existing loop has completed
-		// and all child processses have been reaped before exiting
-		if (reaper->child->pid == pid) {
-			child_exited = 1;
-			child_status = status;
+		default:
+			// the process has already been reaped but check if it was our child process
+			// and save the child processes state until our existing loop has completed
+			// and all child processses have been reaped before exiting
+			if (reaper->child->pid == pid) {
+				child_exited = 1;
+				child_status = status;
+			}
 		}
 	}
 	return 0;
