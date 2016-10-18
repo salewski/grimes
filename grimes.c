@@ -57,6 +57,17 @@ int reaper_new(reaper_t * reaper, process_t * process)
 	return 0;
 }
 
+// reaper_exit closes the reaper's signalfd and exits with the 
+// child's exit status
+void reaper_exit(reaper_t * reaper, int status)
+{
+	close(reaper->fd);
+	if (WIFSIGNALED(status)) {
+		exit(WTERMSIG(status) + 128);
+	}
+	exit(WEXITSTATUS(status));
+}
+
 // reaper_reap reaps any dead processes.  If the process that is reaped 
 // is the child process that we spawned get its exit status and exit this program
 int reaper_reap(reaper_t * reaper)
@@ -66,18 +77,19 @@ int reaper_reap(reaper_t * reaper)
 		pid_t pid = waitpid(-1, &status, WNOHANG);
 		switch (pid) {
 		case 0:
-			// nothing to do here
+			// exiting here means that our direct child has exited but they are other processes
+			// still running in the conatiner.  we can just exit here as we are pid1 and everything
+			// else left will be SIGKILL'd by the kernel
+			if (child_exited) {
+				reaper_exit(reaper, child_status);
+			}
 			return 0;
 		case -1:
 			if (errno != ECHILD) {
 				return -1;
 			}
 			if (child_exited) {
-				close(reaper->fd);
-				if (WIFSIGNALED(child_status)) {
-					exit(WTERMSIG(child_status) + 128);
-				}
-				exit(WEXITSTATUS(child_status));
+				reaper_exit(reaper, child_status);
 			}
 			return 0;
 		default:
