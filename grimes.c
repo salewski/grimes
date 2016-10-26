@@ -29,7 +29,7 @@ typedef struct reaper_t {
 } reaper_t;
 
 // reaper_new initializes the reaper with the provided process.
-// it also sets up the signal handlers and child handlers for restore 
+// it also sets up the signal handlers and child handlers for restore
 // when the child is execed
 int reaper_new(reaper_t * reaper, process_t * process)
 {
@@ -57,7 +57,7 @@ int reaper_new(reaper_t * reaper, process_t * process)
 	return 0;
 }
 
-// reaper_exit closes the reaper's signalfd and exits with the 
+// reaper_exit closes the reaper's signalfd and exits with the
 // child's exit status
 void reaper_exit(reaper_t * reaper, int status)
 {
@@ -68,7 +68,7 @@ void reaper_exit(reaper_t * reaper, int status)
 	exit(WEXITSTATUS(status));
 }
 
-// reaper_reap reaps any dead processes.  If the process that is reaped 
+// reaper_reap reaps any dead processes.  If the process that is reaped
 // is the child process that we spawned get its exit status and exit this program
 int reaper_reap(reaper_t * reaper)
 {
@@ -140,6 +140,12 @@ int main(int argc, char **argv)
 {
 	process_t process;
 	reaper_t reaper;
+
+	if (argc == 2 && !strcmp(argv[1], "--version")) {
+		printf("grimes version %s\n", VERSION);
+		exit(0);
+	}
+
 	if (reaper_new(&reaper, &process) != 0) {
 		bail("initialize reaper %s", strerror(errno));
 	}
