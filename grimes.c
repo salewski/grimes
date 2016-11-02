@@ -72,7 +72,7 @@ void reaper_exit(reaper_t * reaper, int status)
 // is the child process that we spawned get its exit status and exit this program
 int reaper_reap(reaper_t * reaper)
 {
-	int status, child_exited, child_status = 0;
+	int status = 0, child_exited = 0, child_status = 0;
 	for (;;) {
 		pid_t pid = waitpid(-1, &status, WNOHANG);
 		switch (pid) {
